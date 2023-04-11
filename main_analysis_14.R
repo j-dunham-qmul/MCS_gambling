@@ -17,10 +17,8 @@ df2 <- read.dta(file = r"(C:\Users\James\Desktop\Gambling\Data\MCS_14\UKDA-8156-
 weights <- read.dta(file = r"(C:\Users\James\Desktop\Gambling\Data\longitudinal_family_file\stata\stata13\mcs_longitudinal_family_file.dta)",
                     convert.factors = F)
 
-
-
 df <- df2 %>%
-  inner_join(df1, by=c("MCSID", "FCNUM00")) %>% 
+  inner_join(df1, by=c("MCSID", "FCNUM00", "FCCSEX00")) %>% 
     inner_join(weights, by=c("MCSID"))
 
 
@@ -28,7 +26,7 @@ df[df<0] <- NA #non response values coded as negative in this sweep.
   
 #feature engineering----
 
-df$gender <- df$FCCSEX00.x
+df$gender <- df$FCCSEX00 #2 is female
 
 SDQ_elements <- list(emotional_problems="FEMOTION", conduct_problems="FCONDUCT", hyperactivity="FHYPER", peer_problems="FPEER", 
                      prosociality="FPROSOC", total_difficulties="FEBDTOT")
@@ -83,7 +81,7 @@ sex = list(had_sex="FCSEXX00", used_protection="FCCONP0A") #only whether the "la
 risky_behaviours <- list(smoked="smoked", gambled="gambled", drank="drank", tried_drugs="tried_drugs", been_anti_social="asb")
 
 for (row in 1:nrow(df)){
-  df$n_risky[row] <- sum(df[row, unlist(risky_behaviours)] == 1, na.rm = T)*NA^!sum(!is.na(df[row, unlist(risky_behaviours)]))
+  df$n_risky[row] <- sum(df[row, unlist(risky_behaviours)] == 1, na.rm = T)*NA^!sum(!is.na(df[row, unlist(risky_behaviours)])) #set rows only containing NA to 0 with N^!0
 }
 
 n_behaviour <- list()
@@ -115,5 +113,5 @@ models <- list(mod1 = lm(n_risky ~ FHYPER + FCGTRISKT,
 modelsummary(models, vcov = c("iid", "robust"), stars = T)
 
 #ordered logit. Using weights generates a warning that can be ignored
-summary(MASS::polr(formula = factor(n_risky, ordered = T) ~ FCGTRISKT + FHYPER + FCCSEX00.x + FCWRDSC,
+summary(MASS::polr(formula = factor(n_risky, ordered = T) ~ FCGTRISKT + FHYPER + FCCSEX00 + FCWRDSC,
                    data = df, Hess = T, weights = FOVWT2*WEIGHT2))
